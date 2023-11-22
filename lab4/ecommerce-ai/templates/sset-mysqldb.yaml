@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ecom-mysqldb
+  labels:
+    app: ecom-mysqldb
+spec:
+  serviceName: ecom-mysqldb
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ecom-mysqldb
+  template:
+    metadata:
+      labels:
+        app: ecom-mysqldb
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+      - name: mysqldb
+        image: {{ .Values.mysql_image }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3306
+          name: mysqldb
+        resources:
+          limits:
+            cpu: "800m"
+            memory: 2Gi
+          requests:
+            cpu: "100m"
+            memory: 250Mi
+        securityContext:
+          capabilities:
+            add:
+              - IPC_LOCK
+        env:
+          - name: MYSQL_ROOT_PASSWORD
+            value: root
+          - name: MYSQL_DATABASE
+            value: ecommerce
+          - name: MYSQL_USER
+            value: demo
+          - name: MYSQL_PASSWORD 
+            value: demo
+        livenessProbe:
+          tcpSocket:
+            port: 3306
+          initialDelaySeconds: 300
+          periodSeconds: 60
+        # These volume mounts are persistent. They are like inline claims,
+        # but not exactly because the names need to match exactly one of
+        # the stateful pod volumes.
+        volumeMounts:
+        - name: mysqldb-data
+          mountPath: ./mysqldb/volume
+  # These are converted to volume claims by the controller
+  # and mounted at the paths mentioned above.
+  # do not use these in production until ssd GCEPersistentDisk or other ssd pd
+  # volumeClaimTemplates:
+  # - metadata:
+  #     name: mysqldb-data
+  #   spec:
+  #     accessModes: [ "ReadWriteOnce" ]
+  #     storageClassName: {{ .Values.mysqldb_storage  }}
+  #     resources:
+  #       requests:
+  #         storage: 20Gi
+      volumes:
+        - name: mysqldb-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: mysqldb
+  name: mysqldb
+spec:
+  clusterIP: 10.97.157.48
+  ports:
+  - port: 3306
+  selector:
+    app: ecom-mysqldb
+# ---
+# kind: StorageClass
+# apiVersion: storage.k8s.io/v1
+# metadata:
+#   name: {{ .Values.mysqldb_storage  }}
+# provisioner: kubernetes.io/no-provisioner
+# volumeBindingMode: WaitForFirstConsumer

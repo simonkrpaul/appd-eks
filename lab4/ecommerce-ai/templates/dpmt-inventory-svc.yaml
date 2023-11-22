@@ -1,0 +1,164 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecom-inventory-blue-svc
+  labels:
+    framework: java
+    appd-appname: AD-Ecommerce-AI
+  annotations:
+    checksum/config: {{ include (print $.Template.BasePath "/cmap-controller.yaml") . | sha256sum }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ecom-inventory-svc
+  template:
+    metadata:
+      labels:
+        app: ecom-inventory-svc
+    spec:
+      volumes:
+        - name: shared-files
+          emptyDir: {}
+      containers:
+      - name: inventory-services
+        image: {{ .Values.docker_repo }}/ad-ecommerce-java-services-noin:{{ .Values.app_tag }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        env:
+          - name: DISABLE_THREAD_DELAY
+            value: "false"
+          - name: DISABLE_QUERY_DELAY
+            value: "false"
+          - name: THREAD_DELAY_MIN_VALUE
+            value: "30000"
+          - name: THREAD_DELAY_MAX_VALUE
+            value: "120000"
+          - name: DEMO_RELEASE_TYPE
+            value: blue
+          - name: DEMO_RELEASE_VERSION
+            value: 1.1.2
+          - name: CRON_THREAD_DELAY_ON
+            value: 0 5 */2 * * *
+          - name: CRON_THREAD_DELAY_OFF
+            value: 0 20 */2 * * *
+          - name: CRON_QUERY_DELAY_ON
+            value: 0 40 */2 * * *
+          - name: CRON_QUERY_DELAY_OFF
+            value: 0 55 */2 * * *
+          - name: SPRING_DATASOURCE_URL
+            value: jdbc:mysql://mysqldb:3306/ecommerce
+          - name: SPRING_REDIS_HOST
+            value: redisdb
+        envFrom:
+        - configMapRef:
+            name: application-config
+        - configMapRef:
+            name: controller-config
+        resources:
+          limits:
+            cpu: "800m"
+            memory: 2Gi
+          requests:
+            cpu: "250m"
+            memory: 250Mi
+        securityContext:
+          capabilities:
+            add:
+              - IPC_LOCK
+        volumeMounts:
+        - mountPath: /appagent
+          name: shared-files
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 900
+          periodSeconds: 60
+          timeoutSeconds: 5
+      restartPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecom-inventory-green-svc
+  labels:
+    framework: java
+    appd-appname: AD-Ecommerce-AI
+  annotations:
+    checksum/config: {{ include (print $.Template.BasePath "/cmap-controller.yaml") . | sha256sum }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ecom-inventory-svc
+  template:
+    metadata:
+      labels:
+        app: ecom-inventory-svc
+    spec:
+      volumes:
+        - name: shared-files
+          emptyDir: {}
+      containers:
+      - name: inventory-services
+        image: {{ .Values.docker_repo }}/ad-ecommerce-java-services-noin:{{ .Values.app_tag }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        env:
+          - name: DISABLE_THREAD_DELAY
+            value: "true"
+          - name: DISABLE_QUERY_DELAY
+            value: "true"
+          - name: DEMO_RELEASE_TYPE
+            value: green
+          - name: DEMO_RELEASE_VERSION
+            value: 1.1.3
+          - name: SPRING_DATASOURCE_URL
+            value: jdbc:mysql://mysqldb:3306/ecommerce
+          - name: SPRING_REDIS_HOST
+            value: redisdb
+        envFrom:
+        - configMapRef:
+            name: application-config
+        - configMapRef:
+            name: controller-config
+        resources:
+          limits:
+            cpu: "800m"
+            memory: 2Gi
+          requests:
+            cpu: "250m"
+            memory: 250Mi
+        securityContext:
+          capabilities:
+            add:
+              - IPC_LOCK
+        volumeMounts:
+        - mountPath: /appagent
+          name: shared-files
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 900
+          periodSeconds: 60
+          timeoutSeconds: 5
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: inventory-svc
+  name: inventory-svc
+spec:
+  clusterIP: 10.97.157.35
+  ports:
+  - port: 8080
+  selector:
+    app: ecom-inventory-svc

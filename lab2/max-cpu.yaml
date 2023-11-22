@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: max-cpu
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: max-cpu
+  template:
+    metadata:
+      name: max-cpu
+      labels:
+        app: max-cpu
+    spec:
+      containers:
+      - name: max-cpu
+        image: busybox
+        command: ["sh", "-c", "yes > /dev/null & yes > /dev/null"]

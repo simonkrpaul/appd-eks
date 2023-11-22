@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ecom-rabbitmq
+  labels:
+    app: ecom-rabbitmq
+spec:
+  serviceName: ecom-rabbitmq
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ecom-rabbitmq
+  template:
+    metadata:
+      labels:
+        app: ecom-rabbitmq
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+      - name: rabbitmq
+        image: rabbitmq:3-management-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5672
+          name: rabbitmq
+        - containerPort: 15672
+          name: rabbitmq2
+        resources:
+          limits:
+            cpu: 800m
+            memory: 2Gi
+          requests:
+            cpu: 250m
+            memory: 250Mi
+        securityContext:
+          capabilities:
+            add:
+              - IPC_LOCK
+        livenessProbe:
+          tcpSocket:
+            port: 5672
+          initialDelaySeconds: 300
+          periodSeconds: 60
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: rabbitmq
+  name: rabbitmq
+spec:
+  clusterIP: 10.97.157.49
+  ports:
+  - port: 5672
+  selector:
+    app: ecom-rabbitmq
+

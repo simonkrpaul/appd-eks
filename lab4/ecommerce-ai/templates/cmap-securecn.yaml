@@ -1,0 +1,7 @@
+apiVersion: v1
+data:
+  SECURECN_ACCESS_KEY: "a1219798-37bc-4d4f-a590-eeb1d5a7c381"
+  SECURECN_SECRET_KEY: "XludSck1X0YfUOOTXuUKKRtilm7VdorT5Jzj1+BTHx4="
+kind: ConfigMap
+metadata:
+  name: securecn-config

@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecom-load-generator
+  annotations:
+    checksum/config: {{ include (print $.Template.BasePath "/cmap-controller.yaml") . | sha256sum }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: ecom-load-generator
+  template:
+    metadata:
+      labels:
+        name: ecom-load-generator
+    spec:
+#      imagePullSecrets:
+#          - name: regcred
+      containers:
+        - name: ecom-load-generator
+          image: {{ .Values.docker_repo }}/ad-ecommerce-load-generator:{{ .Values.app_tag }}
+#        command: ["sleep", "10000"]
+          resources:
+            limits:
+              memory: "600Mi"
+              cpu: "500m"
+            requests:
+              memory: "200Mi"
+              cpu: "50m"
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: controller-config
+          env:
+            - name: APP_BASE_URL
+              value: http://ecommerce-svc:8080
+            - name: BOOT_TIME_WAIT
+              value: "120000"
+            - name: NUM_WORKFLOWS_MIN
+              value: "1"
+            - name: NUM_WORKFLOWS_MAX
+              value: "10"
+            - name: MINI_DELAY_MIN
+              value: "1000"
+            - name: MINI_DELAY_MAX
+              value: "2000"
+            - name: TIMEOUT_MIN
+              value: "2000"
+            - name: TIMEOUT_MAX
+              value: "30000"
+      restartPolicy: Always

@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecom-angular-frontend
+  annotations:
+    checksum/config: {{ include (print $.Template.BasePath "/cmap-controller.yaml") . | sha256sum }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ecom-angular-frontend
+  template:
+    metadata:
+      labels:
+        app: ecom-angular-frontend
+    spec:
+#      imagePullSecrets:
+#          - name: regcred
+      # initContainers:
+      # - command: ["/bin/sh"]
+      #   args: ["-c", "cp -ra /opt/appdynamics/. /mountPath"]
+      #   image: {{ .Values.appd_repo }}/java-agent:{{ .Values.agent_tag }}
+      #   imagePullPolicy: IfNotPresent
+      #   name: agent-repo
+      #   volumeMounts:
+      #   - mountPath: /mountPath
+      #     name: shared-files
+      volumes:
+        - name: shared-files
+          emptyDir: {}
+      containers:
+      - name: angular-frontend
+        image: {{ .Values.docker_repo }}/ad-ecommerce-angular-frontend:{{ .Values.app_tag }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        env:
+          - name: APPDYNAMICS_AGENT_TIER_NAME 
+            value: Angular-Frontend
+          - name: APPDYNAMICS_JAVA_AGENT_NODE_NAME
+            value: Angular-Frontend-Node1
+          - name: APPDYNAMICS_NETVIZ_AGENT_HOST
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+        envFrom:
+        - configMapRef:
+            name: application-config
+        - configMapRef:
+            name: controller-config
+        livenessProbe:
+          tcpSocket:
+            port: 80
+          initialDelaySeconds: 300
+          periodSeconds: 60
+        resources:
+          limits:
+            cpu: "800m"
+            memory: 2Gi
+          requests:
+            cpu: "250m"
+            memory: 250Mi
+        securityContext:
+          capabilities:
+            add:
+              - IPC_LOCK
+        volumeMounts:
+        - mountPath: /opt/appdynamics-java
+          name: shared-files
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: angular-frontend
+  name: angular-frontend
+spec:
+  clusterIP: 10.96.157.36
+  type: NodePort
+  ports:
+  - port: 80
+    nodePort: 30008
+  selector:
+    app: ecom-angular-frontend
+

@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecom-mainsupplier
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: ecom-mainsupplier
+  template:
+    metadata:
+      labels:
+        name: ecom-mainsupplier
+    spec:
+#      imagePullSecrets:
+#          - name: regcred
+      containers:
+        - name: ecom-mainsupplier
+          image: {{ .Values.docker_repo }}/ad-ecommerce-generic-backend:{{ .Values.app_tag }}
+#        command: ["sleep", "10000"]
+          imagePullPolicy: IfNotPresent
+          ports:
+          - containerPort: 8081
+          resources:
+            limits:
+              memory: "600Mi"
+              cpu: "500m"
+            requests:
+              memory: "200Mi"
+              cpu: "50m"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 300
+            periodSeconds: 60
+            timeoutSeconds: 5
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-main-supplier
+spec:
+  selector:
+    name: ecom-mainsupplier
+  clusterIP: 10.96.157.30
+  ports:
+  - name: "8081"
+    port: 8081
+    targetPort: 8081

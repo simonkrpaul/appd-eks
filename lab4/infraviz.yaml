@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: appdynamics-infraviz
+  namespace: appdynamics
+---
+apiVersion: cluster.appdynamics.com/v1alpha1
+kind: InfraViz
+metadata:
+  name: appdynamics-infraviz
+  namespace: appdynamics
+spec:
+  controllerUrl: "https://9i9t.saas.appdynamics.com:443"
+  image: "docker.io/appdynamics/machine-agent:22.7.0"
+  # imagePullSecret: "regcred"
+  account: "9i9t"
+  globalAccount: "9i9t_b40cdebf-333d-43bc-be95-5e066fc74440"
+  enableContainerHostId: true
+  enableServerViz: true
+  netVizImage: "appdynamics/machine-agent-netviz:21.3.0"
+  netVizPort: 3892
+  enableMasters: true
+

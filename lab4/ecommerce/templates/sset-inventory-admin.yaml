@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ecom-inventory-admin
+  labels:
+    app: ecom-inventory-admin
+  annotations:
+    checksum/config: {{ include (print $.Template.BasePath "/cmap-controller.yaml") . | sha256sum }}
+spec:
+  serviceName: ecom-inventory-admin
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ecom-inventory-admin
+  template:
+    metadata:
+      labels:
+        app: ecom-inventory-admin
+    spec:
+#      imagePullSecrets:
+#          - name: regcred
+      initContainers:
+      - command: ["/bin/sh"]
+        args: ["-c", "cp -ra /opt/appdynamics/. /mountPath"]
+        image: {{ .Values.appd_repo }}/java-agent:{{ .Values.agent_tag }}
+        imagePullPolicy: IfNotPresent
+        name: agent-repo
+        volumeMounts:
+        - mountPath: /mountPath
+          name: shared-files
+      volumes:
+        - name: shared-files
+          emptyDir: {}
+      containers:
+      - name: inventory-admin
+        image: {{ .Values.docker_repo }}/ad-ecommerce-java-secure-app-noin:{{ .Values.app_tag }}
+#        command: ["sleep", "10000"]
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: inventory-admin
+        resources:
+          limits:
+            cpu: "800m"
+            memory: 2Gi
+          requests:
+            cpu: "250m"
+            memory: 250Mi
+        securityContext:
+          capabilities:
+            add:
+              - IPC_LOCK
+        envFrom:
+          - configMapRef:
+              name: application-config
+          - configMapRef:
+              name: controller-config
+        env:
+          - name: CATALINA_OPTS
+            value: '$(CATALINA_OPTS) -javaagent:/opt/appdynamics-java/javaagent.jar '
+          - name: APPDYNAMICS_AGENT_TIER_NAME
+            value: Inventory-Admin
+          - name: APPDYNAMICS_AGENT_NODE_NAME
+            value: Inventory_Admin1
+          - name: APPDYNAMICS_NETVIZ_AGENT_HOST
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+          - name: EXECUTE_SERVLET_HOST 
+            value: localhost
+          - name: EXECUTE_SERVLET_PORT 
+            value: "8085"
+          - name: LAUNCH_DERBY_DEMO 
+            value: "true"
+          - name: DERBY_SYSTEM_HOME 
+            value: /derby
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 300
+          periodSeconds: 60
+        volumeMounts:
+          - mountPath: /opt/appdynamics-java
+            name: shared-files
+      terminationGracePeriodSeconds: 60
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: inventory-admin
+  name: inventory-admin
+spec:
+  clusterIP: 10.96.157.47
+  ports:
+  - name: "8080"
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: ecom-inventory-admin

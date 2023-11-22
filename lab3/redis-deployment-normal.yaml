@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-deployment-normal
+  namespace: ecom
+spec:
+  selector:
+    matchLabels:
+      app: redis-deployment-normal
+  replicas: 10
+  template:
+    metadata:
+      labels:
+        app: redis-deployment-normal
+    spec:
+      containers:
+      - name: redis-deployment-normal
+        image: redis
+        args:
+         - /bin/sh
+         - -c
+         - 'sleep 5000; exit 1'
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits: 
+            cpu: 50m
+            memory: 100M
+          requests:
+            cpu: 20m
+            memory: 50M
+        ports:
+        - containerPort: 6379
+      restartPolicy: Always

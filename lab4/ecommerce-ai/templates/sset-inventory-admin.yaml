@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ecom-inventory-admin
+  labels:
+    app: ecom-inventory-admin
+    framework: java
+    appd-appname: AD-Ecommerce-AI
+  annotations:
+    checksum/config: {{ include (print $.Template.BasePath "/cmap-controller.yaml") . | sha256sum }}
+spec:
+  serviceName: ecom-inventory-admin
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ecom-inventory-admin
+  template:
+    metadata:
+      labels:
+        app: ecom-inventory-admin
+    spec:
+      volumes:
+        - name: shared-files
+          emptyDir: {}
+      containers:
+      - name: inventory-admin
+        image: {{ .Values.docker_repo }}/ad-ecommerce-java-secure-app-noin:{{ .Values.app_tag }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: inventory-admin
+        resources:
+          limits:
+            cpu: "800m"
+            memory: 2Gi
+          requests:
+            cpu: "250m"
+            memory: 250Mi
+        securityContext:
+          capabilities:
+            add:
+              - IPC_LOCK
+        envFrom:
+          - configMapRef:
+              name: application-config
+          - configMapRef:
+              name: controller-config
+        env:
+          - name: EXECUTE_SERVLET_HOST 
+            value: localhost
+          - name: EXECUTE_SERVLET_PORT 
+            value: "8085"
+          - name: LAUNCH_DERBY_DEMO 
+            value: "true"
+          - name: DERBY_SYSTEM_HOME 
+            value: /derby
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 300
+          periodSeconds: 60
+        volumeMounts:
+          - mountPath: /appagent
+            name: shared-files
+      terminationGracePeriodSeconds: 60
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: inventory-admin
+  name: inventory-admin
+spec:
+  clusterIP: 10.97.157.47
+  ports:
+  - name: "8080"
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: ecom-inventory-admin

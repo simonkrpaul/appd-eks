@@ -1,0 +1,30 @@
+# Default values for dbagent.
+# NOTE this version of the chart expects the dbagent to be deployed wtih 
+# appdynamics-operator since it uses the same secret account key
+
+account_access_key: 7ijm6zgp0cp3
+account_name: 9i9t
+controller_host:  9i9t.saas.appdynamics.com
+controller_port: 443
+controller_ssl_enabled: true
+rest_user_acct: admin
+rest_acct_password_base64: FW8gBziDtUDx91bV
+
+application_name: AD-Ecommerce
+namespace: ad-ecommerce
+nodejs_agent_version: 21.9.0
+
+confirm_remote_host: te-demo2.demolabs.net 
+confirm_remote_ip_na: 54.226.108.36
+
+mysqldb_storage: mysql-eks-dev
+mysql_image: mysql:5.7
+oracledb_storage: oracle-eks-dev
+
+blue_query_delay: 5
+
+docker_repo: 631190267745.dkr.ecr.us-east-2.amazonaws.com
+appd_repo: docker.io/appdynamics
+app_tag: latest
+#app_tag: 2021-09-24T14-10-20
+agent_tag: 22.7.0

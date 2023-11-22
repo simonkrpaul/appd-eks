@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecom-load-generator-inventory
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: ecom-load-generator-inventory
+  template:
+    metadata:
+      labels:
+        name: ecom-load-generator-inventory
+    spec:
+#      imagePullSecrets:
+#          - name: regcred
+      containers:
+        - name: ecom-load-generator-inventory 
+          image: {{ .Values.docker_repo }}/ad-ecommerce-load-generator-attack:{{ .Values.app_tag }}
+#        command: ["sleep", "10000"]
+          resources:
+            limits:
+              memory: "600Mi"
+              cpu: "500m"
+            requests:
+              memory: "200Mi"
+              cpu: "50m"
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: controller-config
+          env:
+              - name: APP_BASE_URL
+                value: http://inventory-admin:8080
+              - name: ATTACK_PERC
+                value: "-1"
+              - name: BOOT_TIME_WAIT
+                value: "120000"
+              - name: CALLS_PER_MIN
+                value: "1"
+              - name: PAGES_WAIT_SEC
+                value: "60"
+              - name: TOTAL_REQUESTS
+                value: "-1"
+      restartPolicy: Always

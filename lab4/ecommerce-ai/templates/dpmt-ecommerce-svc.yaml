@@ -1,0 +1,169 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecom-ecommerce-blue-svc
+  labels:
+    framework: java
+    appd-appname: AD-Ecommerce-AI
+  annotations:
+    checksum/config: {{ include (print $.Template.BasePath "/cmap-controller.yaml") . | sha256sum }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ecom-ecommerce-svc
+  template:
+    metadata:
+      labels:
+        app: ecom-ecommerce-svc
+    spec:
+      volumes:
+        - name: shared-files
+          emptyDir: {}
+      containers:
+      - name: ecommerce-services
+        image: {{ .Values.docker_repo }}/ad-ecommerce-java-services-noin:{{ .Values.app_tag }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        env:
+          - name: DISABLE_THREAD_DELAY
+            value: "false"
+          - name: DISABLE_QUERY_DELAY
+            value: "false"
+          - name: THREAD_DELAY_MIN_VALUE
+            value: "11000"
+          - name: THREAD_DELAY_MAX_VALUE
+            value: "19000"
+          - name: QUERY_DELAY_VALUE
+            value: {{ .Values.blue_query_delay | quote }}
+          - name: DEMO_RELEASE_TYPE
+            value: blue
+          - name: DEMO_RELEASE_VERSION
+            value: 1.1.2
+          - name: CRON_THREAD_DELAY_ON
+            value: 0 5 */2 * * *
+          - name: CRON_THREAD_DELAY_OFF
+            value: 0 35 */2 * * *
+          - name: CRON_QUERY_DELAY_ON
+            value: 0 40 */2 * * *
+          - name: CRON_QUERY_DELAY_OFF
+            value: 0 55 */2 * * *
+          - name: SPRING_DATASOURCE_URL
+            value: jdbc:mysql://mysqldb:3306/ecommerce
+          - name: SPRING_REDIS_HOST
+            value: redisdb
+        envFrom:
+        - configMapRef:
+            name: application-config
+        - configMapRef:
+            name: controller-config
+        resources:
+          limits:
+            cpu: "800m"
+            memory: 2Gi
+          requests:
+            cpu: "250m"
+            memory: 250Mi
+        securityContext:
+          capabilities:
+            add:
+              - IPC_LOCK
+        volumeMounts:
+        - mountPath: /appagent
+          name: shared-files
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 900
+          periodSeconds: 60
+          timeoutSeconds: 5
+      restartPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecom-ecommerce-green-svc
+  labels:
+    framework: java
+    appd-appname: AD-Ecommerce-AI
+  annotations:
+    checksum/config: {{ include (print $.Template.BasePath "/cmap-controller.yaml") . | sha256sum }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ecom-ecommerce-svc
+  template:
+    metadata:
+      labels:
+        app: ecom-ecommerce-svc
+    spec:
+      volumes:
+        - name: shared-files
+          emptyDir: {}
+      containers:
+      - name: ecommerce-services
+        image: {{ .Values.docker_repo }}/ad-ecommerce-java-services-noin:{{ .Values.app_tag }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        env:
+          - name: DISABLE_THREAD_DELAY
+            value: "true"
+          - name: DISABLE_QUERY_DELAY
+            value: "true"
+          - name: DEMO_RELEASE_TYPE
+            value: green
+          - name: DEMO_RELEASE_VERSION
+            value: 1.1.3
+          - name: SPRING_DATASOURCE_URL
+            value: jdbc:mysql://mysqldb:3306/ecommerce
+          - name: SPRING_REDIS_HOST
+            value: redisdb
+        envFrom:
+        - configMapRef:
+            name: application-config
+        - configMapRef:
+            name: controller-config
+        resources:
+          limits:
+            cpu: "800m"
+            memory: 2Gi
+          requests:
+            cpu: "250m"
+            memory: 250Mi
+        securityContext:
+          capabilities:
+            add:
+              - IPC_LOCK
+        volumeMounts:
+        - mountPath: /appagent
+          name: shared-files
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 900
+          periodSeconds: 60
+          timeoutSeconds: 5
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: ecommerce-svc
+  name: ecommerce-svc
+spec:
+  clusterIP: 10.97.157.46
+  type: NodePort
+  ports:
+  - port: 8080
+    nodePort: 30109
+  selector:
+    app: ecom-ecommerce-svc
+

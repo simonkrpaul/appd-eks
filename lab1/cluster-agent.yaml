@@ -1,0 +1,14 @@
+apiVersion: cluster.appdynamics.com/v1alpha1
+kind: Clusteragent
+metadata:
+  name: k8s-cluster-agent
+  namespace: appdynamics
+spec:
+  appName: "edu-cluster"
+  controllerUrl: "https://CONTROLLER_ACCOUNT.saas.appdynamics.com:443"
+  account: "CONTROLLER_ACCOUNT"
+  image: "docker.io/appdynamics/cluster-agent:22.7.0"
+  serviceAccountName: appdynamics-cluster-agent
+  # imagePullSecret: "regcred"
+  nsToMonitorRegex: ".*"
+  stdoutLogging: "true"
